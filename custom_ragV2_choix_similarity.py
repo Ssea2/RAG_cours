@@ -24,14 +24,17 @@ YELLOW = '\033[93m'
 NEON_GREEN = '\033[92m'
 RESET_COLOR = '\033[0m'
 
-def upload_data(file,embmod, isdir=False,required_ext = "**/*.pdf"):
+def upload_data(file : str,
+                embmod,
+                isdir : bool =False,
+                required_ext : str = "**/*.pdf") -> int:
 
     chunk_size = 26
     chunk_overlap = 4
 
     # Créer un splitter
     splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=128)
-    print("récupération des fichiers")
+    #print("récupération des fichiers")
     if isdir==True:
         """reader = SimpleDirectoryReader(
             input_dir=file,
@@ -52,7 +55,7 @@ def upload_data(file,embmod, isdir=False,required_ext = "**/*.pdf"):
     for doc in docs:
         split_docs.extend(splitter.split_documents([doc])) 
     #print(split_docs[0].metadata)
-    print("formatage des données")
+    #print("formatage des données")
     data = {}
     for i in tqdm(range(len(split_docs))):
         doc = str(split_docs[i].page_content)+"<PATH>"+str(split_docs[i].metadata["file_path"])
@@ -121,10 +124,47 @@ def RAG_stack(input_query, history, llm="llama3.2:1b"):
         rep = chunk['message']['content']
         print(NEON_GREEN + rep + RESET_COLOR, end='', flush=True)
         reponse.append(rep)
-    print("\n\nSOURCE:")
+    #print("\n\nSOURCE:")
     for file in files:
         print(PINK+file+RESET_COLOR)
     return input_query
+
+
+def RAG_stack_GUI(input_query, history, llm="llama3.2:1b"):
+    #print("query",start)
+    input_query = str(history)+","+input_query
+    results = chroma_collection.query(
+      query_texts=[input_query], # Chroma will embed this for you
+      n_results=10 # how many results to return
+    )
+    dataresult = results["documents"]
+    #distanceresult = results["distances"]
+    #retrieved_knowledge = zip(dataresult,distanceresult)
+    files = []
+    for i in dataresult[0]:
+        files.append(i.split("<PATH>")[-1])
+    files = set(files)
+    #print("prompt",start-time.time())
+    #print(files)
+    #print(results)
+    instruction_prompt = f'''Tu est un chatbot utile, si il y a du contexte entre les banieres <CONTEXTE> répond a la question présent dans les banieres <QUESTION> 
+    <QUESTION> {input_query} <QUESTION>
+    <CONTEXTE> {dataresult} <CONTEXTE>
+    '''
+
+    #print(results)
+    stream = ollama.chat(
+        model=llm,
+        messages=[
+        {'role': 'system', 'content': instruction_prompt},
+        {'role': 'user', 'content': input_query},
+        ],
+        stream=True,
+    )
+    # print the response from the chatbot in real-time
+    #print("\n\nSOURCE:")
+    return stream, files
+
 
 embm = "nomic-embed-text"
 embedding_model = OllamaEmbeddingFunction(
@@ -138,8 +178,8 @@ chroma_collection = client.get_or_create_collection("robia3",embedding_function=
         }
     })
 
-#upload_data("./data", isdir=True, embmod=embm)
-history=[]
+#upload_data("data/SVT", isdir=True, embmod=embm)
+"""history=[]
 while True:
     prompt = input("prompt: ")
     if prompt.lower()=="/bye":
@@ -150,4 +190,4 @@ while True:
         pass
     else:
         tmp=RAG_stack(input_query=prompt, history=history, llm="qwen3:0.6b-q4_K_M")
-        history.append(tmp)
+        history.append(tmp)"""

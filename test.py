@@ -28,25 +28,17 @@ class ImportWindow(QMainWindow):
         self.setCentralWidget(container)
 
     def importer_fichiers(self):
-        # 1. Ouvrir l'explorateur pour choisir des fichiers
-        fichiers, _ = QFileDialog.getOpenFileNames(
-            self,
-            "Sélectionner les fichiers à importer",
-            "",
-            "Tous les fichiers (*.*)"
-        )
+        from PySide6.QtWidgets import QFileDialog, QApplication
+        import sys
+        dialog = QFileDialog()
+        dialog.setWindowTitle("Sélectionner fichiers ou dossiers")
+        dialog.setFileMode(QFileDialog.Directory) # Permet de sélectionner des dossiers
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True) # Utilise l'interface Qt (plus flexible)
 
-        if fichiers:
-            try:
-                for f in fichiers:
-                    chemin_source = Path(f)
-                    # 2. Copier chaque fichier vers la destination
-                    shutil.copy(chemin_source, self.dossier_destination / chemin_source.name)
-                
-                QMessageBox.information(self, "Succès", f"{len(fichiers)} fichier(s) importé(s) avec succès !")
-            
-            except Exception as e:
-                QMessageBox.critical(self, "Erreur", f"Erreur lors de l'import : {e}")
+        # Cette option permet de sélectionner n'importe quel élément dans la vue
+        if dialog.exec():
+            selections = dialog.selectedFiles()
+            print(f"Éléments sélectionnés : {selections}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

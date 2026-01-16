@@ -9,98 +9,15 @@ code du prof
 """
 import ollama
 import chromadb
+import json
 import os 
 #from llama_index.core import SimpleDirectoryReader
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 from langchain_community.document_loaders import DirectoryLoader, TextLoader, PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-import time
 import hashlib
 from tqdm import  tqdm
-
-PINK = '\033[95m'
-CYAN = '\033[96m'
-YELLOW = '\033[93m'
-NEON_GREEN = '\033[92m'
-RESET_COLOR = '\033[0m'
-
-def upload_data(
-        file : str,
-        embmod,
-        isdir : bool =False,
-        required_ext : str = "**/*.pdf",
-        chunk_size : int = 26,
-        chunk_overlap : int = 4,
-        ) -> int:
-   
-
-    # Créer un splitter
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    #print("récupération des fichiers")
-    if isdir==True:
-
-        loader = DirectoryLoader(file, glob=required_ext, loader_cls=PyMuPDFLoader, recursive=True, silent_errors=True)
-
-    else:
-        loader = TextLoader(file)
-    docs = loader.load()#reader.load_data()
-    split_docs = []
-    print("découpage des fichiers")
-    for doc in docs:
-        split_docs.extend(splitter.split_documents([doc])) 
-    #print(split_docs[0].metadata)
-    #print("formatage des données")
-    """for i in tqdm(range(len(split_docs))):
-        doc = str(split_docs[i].page_content)
-        embdata = ollama.embed(model=embmod, input=doc)["embeddings"]
-        id = hashlib.sha256(doc.encode()).hexdigest()
-        nospace_filename = str(split_docs[i].metadata["file_path"]).replace(" ", "_")
-        #data[id]=doc
-        chroma_collection.upsert(
-            ids=id,
-            documents=doc,
-            embeddings=embdata,
-            metadatas={"files_path": nospace_filename}
-        )"""
-    return 0 
-
-
-
-def RAG_stack_GUI(input_query, history, llm="llama3.2:1b"):
-    #print("query",start)
-    input_query = str(history)+","+input_query
-    results = chroma_collection.query(
-      query_texts=[input_query], # Chroma will embed this for you
-      n_results=10 # how many results to return
-    )
-    dataresult = results["documents"]
-    #distanceresult = results["distances"]
-    #retrieved_knowledge = zip(dataresult,distanceresult)
-    files = []
-    for i in dataresult[0]:
-        files.append(i.split("<PATH>")[-1])
-    files = set(files)
-    #print("prompt",start-time.time())
-    #print(files)
-    #print(results)
-    instruction_prompt = f'''Tu est un chatbot utile, si il y a du contexte entre les banieres <CONTEXTE> répond a la question présent dans les banieres <QUESTION> de manière a répondre au mieux avec le plus de détails. Si il y a des url tu les met sosu la forme <a href="url" style="text-decoration:none; color:blue;">"url"</a>' 
-    <QUESTION> {input_query} <QUESTION>
-    <CONTEXTE> {dataresult} <CONTEXTE>
-    '''
-
-    #print(results)
-    stream = ollama.chat(
-        model=llm,
-        messages=[
-        {'role': 'system', 'content': instruction_prompt},
-        {'role': 'user', 'content': input_query},
-        ],
-        stream=True,
-    )
-    # print the response from the chatbot in real-time
-    #print("\n\nSOURCE:")
-    return stream, files
 
 
 class RAG_Upload():
@@ -127,15 +44,6 @@ class RAG_Upload():
             else:
                 loader = PyMuPDFLoader(file)
             self.docs = loader.load()#reader.load_data()"""
-        """for root, dirs, files in tqdm(os.walk(paths)):
-            for dir in dirs:
-                dir_path = os.path.join(root,dir)
-                new_dir_path = dir_path.replace(' ', '_')
-                os.rename(dir_path, new_dir_path)
-            for file in files:
-                file_path = os.path.join(root, file)
-                new_file_path = file_path.replace(' ', '_')
-                os.rename(file_path, new_file_path)"""     
 
     def split_document(self):
         for doc in self.docs:
@@ -163,20 +71,22 @@ class RAG_Upload():
 
 class RAG_Answer():
 
-    def __init__(self, llm="llama3.2:1b", top_n_result: int = 10):
+    def __init__(self, db, embeding_model, llm="llama3.2:1b", top_n_result: int = 10):
         
         self.llm = llm
+        self.db , self.embefing_model = 
         self.n_result = top_n_result
         self.results = []
         self.files_sources = []
         self.textdata = []
         self.instruction_prompt = "Tu est un chatbot utile, si il y a du contexte entre les banieres <CONTEXTE> répond a la question présent dans les banieres <QUESTION> "
 
+
     def get_input_prompt(self, input_query, history):
         self.prompt = str(history)+","+input_query
 
     def similarity_search(self):
-        self.results = chroma_collection.query(
+        self.results = self.db.query(
         query_texts=[self.prompt], # Chroma will embed this for you
         n_results=self.n_result # how many results to return
         )
@@ -192,10 +102,12 @@ class RAG_Answer():
         
 
     def update_prompt(self):
-        self.enchanced_prompt = f'''Tu est un chatbot utile, si il y a du contexte entre les banieres <CONTEXTE> répond a la question présent dans les banieres <QUESTION> 
+        self.enchanced_prompt = f'''Tu est un chatbot utile, 
+        si il y a du contexte entre les banieres <CONTEXTE> répond a la question présent dans les banieres <QUESTION> 
+        de manière a répondre au mieux avec le plus de détails. Si il y a des url tu les met sosu la forme <a href="url" style="text-decoration:none; color:blue;">"url"</a>' 
+    
         <QUESTION> {self.prompt} <QUESTION>
-        <CONTEXTE> {self.textdata} <CONTEXTE>
-        '''
+        <CONTEXTE> {self.textdata} <CONTEXTE>instruction_prompt = f'''
         #print(self.enchanced_prompt)
         
     def rag_prompt(self):
@@ -217,7 +129,7 @@ class RAG_Answer():
         return stream, files
 
 
-embm = "nomic-embed-text"
+"""embm = "nomic-embed-text"
 embedding_model = OllamaEmbeddingFunction(
     model_name=embm,     # ou "mxbai‑embed‑large", ou "chroma/all‑minilm‑l6‑v2‑f32"
     url="http://localhost:11434/api/embeddings",)
@@ -227,9 +139,9 @@ chroma_collection = client.get_or_create_collection("robia",embedding_function=e
         "hnsw": {
             "space": "cosine",
         }
-    })
+    })"""
 
-RAG_Upload(chroma_collection, embeding_model=embm, chunk_size=512, overlap_size=128).stack([r"data/automatisme/25-26 LP3 R520 - Intro ISA-88v3.pdf"])
+#RAG_Upload(chroma_collection, embeding_model=embm, chunk_size=512, overlap_size=128).stack([r"/home/sseatwo/Obsidian/Learn/intelligence_artificielle/analyse_de_donnée/Mesure de similarité.md"])
 #stream , file = RAG_Answer().rag_stack("explain how to instyall rocm", [])
 #print(file)
 #RAG_Upload(chroma_collection, embm).get_document(r"data")

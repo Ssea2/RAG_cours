@@ -1,7 +1,9 @@
 import sys
 import logging
 import markdown
-import urllib.parse
+import chromadb
+
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 
 
 from PySide6.QtWidgets import (QLineEdit, QPushButton, QApplication, QLabel,QScrollArea,QWidget, QMainWindow, QHBoxLayout, QFileDialog, QSizePolicy,
@@ -23,10 +25,10 @@ class RAG_stack(QObject):
     word_ready = Signal(str)  # signal pour chaque mot/tronçon
     finished = Signal()
 
-    def __init__(self, text):
+    def __init__(self, text, db):
         super().__init__()
         self.text = text
-        self.rag = RAG_Answer(llm="qwen3:0.6b-q4_K_M", top_n_result=30)
+        self.rag = RAG_Answer(db, llm="qwen3:0.6b-q4_K_M", top_n_result=30)
 
     def run(self):
         stream, files = self.rag.rag_stack(self.text)
@@ -62,7 +64,7 @@ class RAG_stack(QObject):
 class GUI_RAG(QMainWindow):
     
 
-    def __init__(self, parent=None):
+    def __init__(self, db, parent=None):
         super(GUI_RAG, self).__init__(parent)
         logging.info("démarage de l'application")
         # data 
@@ -82,6 +84,7 @@ class GUI_RAG(QMainWindow):
                 padding: 5px; 
                 margin: 0px; 
             """
+        self.db = db
 
         # création de la page
         self.raw_window = QWidget(self)
@@ -158,7 +161,7 @@ class GUI_RAG(QMainWindow):
     def RAG_thread(self):
         logging.info("démarage du thread => RAG")
         self.thread = QThread(self)
-        self.worker = RAG_stack(self.prompt)
+        self.worker = RAG_stack(self.prompt, self.db)
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -223,10 +226,21 @@ class GUI_RAG(QMainWindow):
         
 
 if __name__ == '__main__':
+    embm = "nomic-embed-text"
+    embedding_model = OllamaEmbeddingFunction(
+        model_name=embm,     # ou "mxbai‑embed‑large", ou "chroma/all‑minilm‑l6‑v2‑f32"
+        url="http://localhost:11434/api/embeddings",)
+
+    client = chromadb.PersistentClient(path="chroma_db/robia") # robia/isa88 robia2(filtered robia)
+    chroma_collection = client.get_or_create_collection("robia",embedding_function=embedding_model,configuration={
+            "hnsw": {
+                "space": "cosine",
+            }
+        })
     # Create the Qt Application
     app = QApplication(sys.argv)
     # Create and show the form
-    form = GUI_RAG()
+    form = GUI_RAG(db=chroma_collection)
     form.show()
     # Run the main Qt loop
     sys.exit(app.exec())

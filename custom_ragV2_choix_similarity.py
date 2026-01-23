@@ -71,10 +71,10 @@ class RAG_Upload():
 
 class RAG_Answer():
 
-    def __init__(self, db, embeding_model, llm="llama3.2:1b", top_n_result: int = 10):
+    def __init__(self, db, llm="qwen3:0.6b-q4_K_M", top_n_result: int = 15):
         
         self.llm = llm
-        self.db , self.embefing_model = 
+        self.db  = db
         self.n_result = top_n_result
         self.results = []
         self.files_sources = []
@@ -129,35 +129,36 @@ class RAG_Answer():
         return stream, files
 
 
-"""embm = "nomic-embed-text"
-embedding_model = OllamaEmbeddingFunction(
-    model_name=embm,     # ou "mxbai‑embed‑large", ou "chroma/all‑minilm‑l6‑v2‑f32"
-    url="http://localhost:11434/api/embeddings",)
+if __name__=="__main__":
+    embm = "nomic-embed-text"
+    embedding_model = OllamaEmbeddingFunction(
+        model_name=embm,     # ou "mxbai‑embed‑large", ou "chroma/all‑minilm‑l6‑v2‑f32"
+        url="http://localhost:11434/api/embeddings",)
 
-client = chromadb.PersistentClient(path="chroma_db/robia") # robia/isa88 robia2(filtered robia)
-chroma_collection = client.get_or_create_collection("robia",embedding_function=embedding_model,configuration={
-        "hnsw": {
-            "space": "cosine",
-        }
-    })"""
+    client = chromadb.PersistentClient(path="chroma_db/robia") # robia/isa88 robia2(filtered robia)
+    chroma_collection = client.get_or_create_collection("robia",embedding_function=embedding_model,configuration={
+            "hnsw": {
+                "space": "cosine",
+            }
+        })
 
-#RAG_Upload(chroma_collection, embeding_model=embm, chunk_size=512, overlap_size=128).stack([r"/home/sseatwo/Obsidian/Learn/intelligence_artificielle/analyse_de_donnée/Mesure de similarité.md"])
-#stream , file = RAG_Answer().rag_stack("explain how to instyall rocm", [])
-#print(file)
-#RAG_Upload(chroma_collection, embm).get_document(r"data")
-#upload_data(r"data/SVT", embmod=embm, isdir=True)
-#print(os.path.isfile("data/SVT/cour prof pronote/T1.pdf"))
+    RAG_Upload(chroma_collection, embeding_model=embm, chunk_size=512, overlap_size=128).stack([liste de fichier])
+    #stream , file = RAG_Answer().rag_stack("explain how to instyall rocm", [])
+    #print(file)
+    #RAG_Upload(chroma_collection, embm).get_document(r"data")
+    #upload_data(r"data/SVT", embmod=embm, isdir=True)
+    #print(os.path.isfile("data/SVT/cour prof pronote/T1.pdf"))
 
-#upload_data("data/SVT", isdir=True, embmod=embm)
-"""history=[]
-while True:
-    prompt = input("prompt: ")
-    if prompt.lower()=="/bye":
-        break
-        pass
-    if prompt.lower()=="/clear":
-        history=[]
-        pass
-    else:
-        tmp=RAG_stack(input_query=prompt, history=history, llm="qwen3:0.6b-q4_K_M")
-        history.append(tmp)"""
+    #upload_data("data/SVT", isdir=True, embmod=embm)
+    """history=[]
+    while True:
+        prompt = input("prompt: ")
+        if prompt.lower()=="/bye":
+            break
+            pass
+        if prompt.lower()=="/clear":
+            history=[]
+            pass
+        else:
+            tmp=RAG_stack(input_query=prompt, history=history, llm="qwen3:0.6b-q4_K_M")
+            history.append(tmp)"""
